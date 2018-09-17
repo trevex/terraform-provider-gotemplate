@@ -15,33 +15,35 @@ ARCHITECTURES=386 amd64
 LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.Build=${BUILD}"
 
 # Detect OS
-GOOS :=
-GOARCH :=
-ifeq ($(OS),Windows_NT)
-	GOOS = windows
-	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-		GOARCH = amd64
-	endif
-	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-		GOARCH = 386
-	endif
-else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-		GOOS = linux
-	endif
-	ifeq ($(UNAME_S),Darwin)
-		GOOS = darwin
-	endif
-		UNAME_P := $(shell uname -p)
-	ifeq ($(UNAME_P),x86_64)
-		GOARCH = amd64
-	endif
-		ifneq ($(filter %86,$(UNAME_P)),)
+GOOS := ${GOOS}
+GOARCH := ${GOARCH}
+ifeq ($(GOOS)$(GOARCH),)
+	ifeq ($(OS),Windows_NT)
+		GOOS = windows
+		ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+			GOARCH = amd64
+		endif
+		ifeq ($(PROCESSOR_ARCHITECTURE),x86)
 			GOARCH = 386
 		endif
-	ifneq ($(filter arm%,$(UNAME_P)),)
-		GOOS = arm
+	else
+		UNAME_S := $(shell uname -s)
+		ifeq ($(UNAME_S),Linux)
+			GOOS = linux
+		endif
+		ifeq ($(UNAME_S),Darwin)
+			GOOS = darwin
+		endif
+			UNAME_P := $(shell uname -p)
+		ifeq ($(UNAME_P),x86_64)
+			GOARCH = amd64
+		endif
+			ifneq ($(filter %86,$(UNAME_P)),)
+				GOARCH = 386
+			endif
+		ifneq ($(filter arm%,$(UNAME_P)),)
+			GOOS = arm
+		endif
 	endif
 endif
 
