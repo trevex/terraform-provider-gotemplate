@@ -15,7 +15,7 @@ install:
 
 script:
   - dep ensure
-  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64" -output="terraform-provider-gotemplate.." -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
+  - if [ "${LATEST}" = "true" ]; then gox -os="linux darwin windows" -arch="amd64" -ldflags "-X main.Rev=`git rev-parse --short HEAD`" -verbose ./...; fi
 
 deploy:
   provider: releases
@@ -23,9 +23,9 @@ deploy:
   api_key:
     secure: gth2yiZUMW/tinPK+iJvamumE79DmbKAiC1aeCK8c5LScmkxSxsvYZzTatU0u7AcSqnh6+RuzmqXQL01NzUcQvxONb6TMWKiYoqSmXtl3jTKSbBdL8nEHkWQ7sI1E21RILAplRxlyuEPDKjuvf2VOgef8vOTDVhe04UdId94x+rDAMrUhWe2jS6QdI5RIg5iie+uYWhlpTEB9Eww97/I4Z2YmZnlQ0nVZ/fCCceE2LC/UiBR7aGJotVBM1WqDKxPHvvf4qbQa0yRqVJpl5zGiOMetx+8rTpKWkeEPXRxrQHcpj6A2c6Cre4zZshSyWwirlZfKZ5+4PTBJBCNcr/IwYdTf5RvYpfvB4SOU5QasqZQrcRleiyDbgwf3GcG5P6YK29TtcX+K2btdviqb8kWpK0dFqVIfnwjDifJRaxyQ3MANWMt2Cu230Zq9C1NRW1r8G3YcYyC89uwzVeonXyT8qaB3eOsy5Ms9JXaQiGqtQgrOlSSOUaoJWhH0uFMyKdjLQ9aWPtOpDP7o78PqFh72npHavZU4FGkxpfFAvcdOGI8/X5GR+8pZmDnSi87UfnIxVIPWty4IHnRncYVovA9eocwx0ZLg326KEBmuXauQqg6jF5v3W1gFMEfLOqBmoP4gWPdgT3E7+IVDJEhM6wQpe4YoT5gjXg+qdE1EFGdew8=
   file:
-  - terraform-provider-gotemplate.windows.amd64.exe
-  - terraform-provider-gotemplate.darwin.amd64
-  - terraform-provider-gotemplate.linux.amd64
+  - terraform-provider-gotemplate_windows_amd64.exe
+  - terraform-provider-gotemplate_darwin_amd64
+  - terraform-provider-gotemplate_linux_amd64
   on:
     repo: trevex/terraform-provider-gotemplate
     tags: true
