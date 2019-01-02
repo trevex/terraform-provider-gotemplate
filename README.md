@@ -1,5 +1,5 @@
 # terraform-provider-gotemplate
-
+__FORK! ADDS MULTI TEPLATE SUPPORT__
 
 ## build and run tf
 ```
