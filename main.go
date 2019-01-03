@@ -6,13 +6,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"path"
-	"reflect"
-	"text/template"
 	"github.com/Masterminds/sprig"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/plugin"
 	"github.com/hashicorp/terraform/terraform"
+	"path"
+	"reflect"
+	"text/template"
 )
 
 func hash(s string) string {
@@ -20,13 +20,25 @@ func hash(s string) string {
 	return hex.EncodeToString(sha[:])
 }
 
-type templateRenderError error
-
 func renderFile(d *schema.ResourceData) (string, error) {
-
 	var err error
-
-	tf := template.FuncMap{
+	// Get the data from terraform
+	var data string
+	data = d.Get("data").(string)
+	// Unmarshal json from data into m
+	var m = make(map[string]interface{}) // unmarshal data into m
+	if err = json.Unmarshal([]byte(data), &m); err != nil {
+		return "", fmt.Errorf("failed to unmarshal string as json: %v", err)
+	}
+	// Acquire the list of templates
+	var templateFiles = make([]string, 0)
+	for _, templateFile := range d.Get("templates").([]interface{}) {
+		templateFiles = append(templateFiles, templateFile.(string))
+	}
+	baseName := path.Base(templateFiles[0]) // Use first templatefile as name
+	t := template.New(baseName)
+	// Create the function map
+	funcMap := template.FuncMap{
 		"isInt": func(i interface{}) bool {
 			v := reflect.ValueOf(i)
 			switch v.Kind() {
@@ -72,39 +84,44 @@ func renderFile(d *schema.ResourceData) (string, error) {
 				return false
 			}
 		},
+		// Helper functions similar to helm
+		"include": func(name string, data interface{}) (string, error) {
+			buf := bytes.NewBuffer(nil)
+			if err := t.ExecuteTemplate(buf, name, data); err != nil {
+				return "", err
+			}
+			return buf.String(), nil
+		},
+		"required": func(warn string, val interface{}) (interface{}, error) {
+			if val == nil {
+				// Convert nil to "" in case required is piped into other functions
+				return "", fmt.Errorf(warn)
+			} else if _, ok := val.(string); ok {
+				if val == "" {
+					return val, fmt.Errorf(warn)
+				}
+			}
+			return val, nil
+		},
 	}
-
+	// Add all sprig functions
 	for k, v := range sprig.TxtFuncMap() {
-		tf[k] = v
+		funcMap[k] = v
 	}
-
-	var data string // data from tf
-	data = d.Get("data").(string)
-
-	// unmarshal json from data into m
-	var m = make(map[string]interface{}) // unmarshal data into m
-	if err = json.Unmarshal([]byte(data), &m); err != nil {
-		return "", templateRenderError(fmt.Errorf("failed to render %v", err))
-	}
-
-	var templateFiles = make([]string, 0)
-	for _, templateFile := range d.Get("templates").([]interface{}) {
-	    templateFiles = append(templateFiles,templateFile.(string))
-	}
-	baseName := path.Base(templateFiles[0]) // use first templatefile as name
-	tt, err := template.New(baseName).Funcs(tf).ParseFiles(templateFiles...)
+	// Add the functions and parse the templates
+	t, err := t.Funcs(funcMap).ParseFiles(templateFiles...)
 	if err != nil {
-		return "", templateRenderError(fmt.Errorf("failed to render %v", err))
+		return "", fmt.Errorf("Failed parsing templates: %v", err)
 	}
-
+	// Execute the template
 	var contents bytes.Buffer // io.writer for template.Execute
-	if tt != nil {
-		err = tt.Execute(&contents, m)
+	if t != nil {
+		err = t.Execute(&contents, m)
 		if err != nil {
-			return "", templateRenderError(fmt.Errorf("failed to render %v", err))
+			return "", fmt.Errorf("Failed to execute template: %v", err)
 		}
 	} else {
-		return "", templateRenderError(fmt.Errorf("error: %v", err))
+		return "", fmt.Errorf("Unknown error: %v", err)
 	}
 
 	return contents.String(), nil
@@ -130,7 +147,7 @@ func dataSourceFile() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Required: true,
+				Required:    true,
 				Description: "path to go template file",
 			},
 			"data": &schema.Schema{
@@ -152,7 +169,7 @@ func dataSourceFile() *schema.Resource {
 func main() {
 	plugin.Serve(&plugin.ServeOpts{
 		ProviderFunc: func() terraform.ResourceProvider {
-			return  &schema.Provider{
+			return &schema.Provider{
 				DataSourcesMap: map[string]*schema.Resource{
 					"gotemplate": dataSourceFile(),
 				},
@@ -160,4 +177,3 @@ func main() {
 		},
 	})
 }
-
