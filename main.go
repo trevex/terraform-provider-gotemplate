@@ -109,7 +109,7 @@ func renderFile(d *schema.ResourceData) (string, error) {
 		funcMap[k] = v
 	}
 	// Add the functions and parse the templates
-	t, err := t.Funcs(funcMap).ParseFiles(templateFiles...)
+	t, err = t.Funcs(funcMap).ParseFiles(templateFiles...)
 	if err != nil {
 		return "", fmt.Errorf("Failed parsing templates: %v", err)
 	}
