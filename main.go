@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/plugin"
 	"github.com/hashicorp/terraform/terraform"
+	"github.com/imdario/mergo"
 	"path"
 	"reflect"
 	"text/template"
@@ -23,12 +24,15 @@ func hash(s string) string {
 func renderFile(d *schema.ResourceData) (string, error) {
 	var err error
 	// Get the data from terraform
-	var data string
-	data = d.Get("data").(string)
-	// Unmarshal json from data into m
-	var m = make(map[string]interface{}) // unmarshal data into m
-	if err = json.Unmarshal([]byte(data), &m); err != nil {
-		return "", fmt.Errorf("failed to unmarshal string as json: %v", err)
+	var data = make(map[string]interface{})
+	for _, input := range d.Get("inputs").([]interface{}) {
+		tmp := make(map[string]interface{})
+		if err = json.Unmarshal([]byte(input.(string)), &tmp); err != nil {
+			return "", fmt.Errorf("Failed to unmarshal string as json: %v", err)
+		}
+		if err = mergo.Merge(&data, tmp, mergo.WithAppendSlice); err != nil {
+			return "", fmt.Errorf("Failed merging json snippets: %v", err)
+		}
 	}
 	// Acquire the list of templates
 	var templateFiles = make([]string, 0)
@@ -116,7 +120,7 @@ func renderFile(d *schema.ResourceData) (string, error) {
 	// Execute the template
 	var contents bytes.Buffer // io.writer for template.Execute
 	if t != nil {
-		err = t.Execute(&contents, m)
+		err = t.Execute(&contents, data)
 		if err != nil {
 			return "", fmt.Errorf("Failed to execute template: %v", err)
 		}
@@ -150,12 +154,13 @@ func dataSourceFile() *schema.Resource {
 				Required:    true,
 				Description: "path to go template file",
 			},
-			"data": &schema.Schema{
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "",
-				Description:  "variables to substitute",
-				ValidateFunc: nil,
+			"inputs": &schema.Schema{
+				Type: schema.TypeList,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Required:    true,
+				Description: "variables to substitute",
 			},
 			"rendered": &schema.Schema{
 				Type:        schema.TypeString,
